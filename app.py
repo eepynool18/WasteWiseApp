@@ -266,3 +266,113 @@ if viz_option_real == "FLW by Supply Chain Stage":
         plt.legend()
         plt.tight_layout()
         st.pyplot(plt)
+# --- Future FLW Prediction Section ---
+st.header("Future FLW Prediction and Visualization")
+
+st.write("This section predicts and visualizes future FLW based on hypothetical or future inputs, using the most recent patterns in FLW for the given parameters.")
+
+# User input for country (Future Prediction)
+future_country = st.selectbox("Select Country for Future Prediction", flw_data['country'].unique(), key='future_country_select')
+
+# Filter the dataset based on selected country (Future Prediction)
+future_filtered_data_by_country = flw_data[flw_data['country'] == future_country]
+
+# Dynamically filter the commodities and supply chain stages based on the selected country (Future Prediction)
+future_commodities_for_country = future_filtered_data_by_country['commodity'].unique()
+future_supply_chain_stages_for_country = future_filtered_data_by_country['food_supply_stage'].unique()
+
+# User inputs for commodity and supply chain stage (Future Prediction)
+future_commodity = st.selectbox("Select Commodity for Future Prediction", future_commodities_for_country, key='future_commodity_select')
+future_supply_chain_stage = st.selectbox("Select Supply Chain Stage for Future Prediction", future_supply_chain_stages_for_country, key='future_supply_chain_stage_select')
+
+# User input for year (Future Prediction)
+future_year = st.number_input(
+    "Select Future Year",
+    min_value=int(flw_data['year'].max() + 1),
+    max_value=int(flw_data['year'].max() + 20),  # Allow predictions for up to 20 years into the future
+    step=1,
+    key='future_year_input'
+)
+
+# Predict button for Future Prediction
+if st.button("Predict Future FLW Percentage"):
+    future_input_data = pd.DataFrame({
+        'country': [future_country],
+        'commodity': [future_commodity],
+        'year': [future_year],
+        'food_supply_stage': [future_supply_chain_stage]
+    })
+
+    future_prediction = dtpipeline.predict(future_input_data)[0]
+    st.write(f"Predicted Future FLW Percentage: {future_prediction:.2f}%")
+
+# Future Visualization Options
+st.write("## Future FLW Visualizations")
+
+future_viz_option = st.selectbox(
+    "Choose a Future Visualization:",
+    ("Predicted FLW by Commodity", "Predicted FLW by Supply Chain Stage"),
+    key='future_viz_option_select'
+)
+
+# Button to generate the FLW by Commodity graph (Future Prediction)
+if future_viz_option == "Predicted FLW by Commodity":
+    if st.button("Generate Future FLW by Commodity Graph"):
+        future_predictions_by_commodity = []
+        for com in future_commodities_for_country:
+            future_input_data = pd.DataFrame({
+                'country': [future_country],
+                'commodity': [com],
+                'year': [future_year],
+                'food_supply_stage': [future_supply_chain_stage]
+            })
+            future_prediction = dtpipeline.predict(future_input_data)[0]
+            future_predictions_by_commodity.append((com, future_prediction))
+
+        # Sort and display the top 10 commodities
+        future_top_10_commodities = sorted(future_predictions_by_commodity, key=lambda x: x[1], reverse=True)[:10]
+        future_top_10_com_names, future_top_10_pred_values = zip(*future_top_10_commodities)
+
+        future_wrapped_com_names = [wrap_text(name, 20) for name in future_top_10_com_names]
+
+        # Plot the top 10 commodities (Future Prediction)
+        plt.figure(figsize=(10, 5))
+        plt.bar(future_wrapped_com_names, future_top_10_pred_values, color='skyblue')
+
+        plt.title(f"Top 10 Predicted Future FLW by Commodity for {future_country} in {future_year} at {future_supply_chain_stage} Stage")
+        plt.xlabel("Commodity")
+        plt.ylabel("Predicted FLW Percentage")
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
+        st.pyplot(plt)
+
+# Button to generate the FLW by Supply Chain Stage graph (Future Prediction)
+if future_viz_option == "Predicted FLW by Supply Chain Stage":
+    if st.button("Generate Future FLW by Supply Chain Stage Graph"):
+        future_predictions_by_stage = []
+        for stage in future_supply_chain_stages_for_country:
+            future_input_data = pd.DataFrame({
+                'country': [future_country],
+                'commodity': [future_commodity],
+                'year': [future_year],
+                'food_supply_stage': [stage]
+            })
+            future_prediction = dtpipeline.predict(future_input_data)[0]
+            future_predictions_by_stage.append((stage, future_prediction))
+
+        future_sorted_stages = sorted(future_predictions_by_stage, key=lambda x: x[1], reverse=True)
+        future_stage_names, future_pred_values = zip(*future_sorted_stages)
+
+        future_wrapped_stage_names = [wrap_text(name, 20) for name in future_stage_names]
+
+        # Plot the predicted FLW by supply chain stage (Future Prediction)
+        plt.figure(figsize=(10, 5))
+        plt.bar(future_wrapped_stage_names, future_pred_values, color='skyblue')
+
+        plt.title(f"Predicted Future FLW by Supply Chain Stage for {future_commodity} in {future_country} in {future_year}")
+        plt.xlabel("Supply Chain Stage")
+        plt.ylabel("Predicted FLW Percentage")
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
+        st.pyplot(plt)
+
